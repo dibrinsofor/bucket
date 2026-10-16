@@ -5,7 +5,9 @@
   "description": "Save highlighted text with a right-click",
   "permissions": [
     "contextMenus",
-    "storage"
+    "storage",
+    "activeTab",
+    "scripting"
   ],
   "background": {
     "scripts": ["browser-polyfill.js", "background.js"],
@@ -16,11 +18,11 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "action": {
-    "default_popup": "popup/popup.html",
-    "default_icon": {
-      "16": "icons/icon-16.png",
-      "48": "icons/icon-48.png"
+  "action": {},
+  "web_accessible_resources": [
+    {
+      "resources": ["sidebar/sidebar.html", "sidebar/sidebar.css"],
+      "matches": ["<all_urls>"]
     }
-  }
+  ]
 }
