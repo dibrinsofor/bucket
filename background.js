@@ -10,11 +10,27 @@ browser.runtime.onInstalled.addListener(() => {
 // Handle context menu click
 browser.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "save-to-bucket" && info.selectionText) {
+    // Get font info from content script
+    let fontInfo = null;
+    try {
+      // Ensure content script is injected (needed for pre-existing tabs)
+      await browser.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["content.js"]
+      });
+
+      const response = await browser.tabs.sendMessage(tab.id, { type: "GET_SELECTION_FONT" });
+      fontInfo = response?.fontInfo || null;
+    } catch (e) {
+      // Content script may not be loaded or page doesn't allow injection
+    }
+
     const entry = {
       id: Date.now(),
       text: info.selectionText,
       url: tab.url,
       title: tab.title,
+      fontInfo,
       savedAt: new Date().toISOString()
     };
 
@@ -56,6 +72,13 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "CLEAR_ALL") {
     browser.storage.local.set({ bucket: [] }).then(() => {
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+
+  if (message.type === "UPDATE_ENTRIES") {
+    browser.storage.local.set({ bucket: message.entries }).then(() => {
       sendResponse({ success: true });
     });
     return true;
