@@ -189,11 +189,16 @@
       top: -10px;
       left: 50%;
       transform: translateX(-50%);
-      width: 60px;
+      width: 70px;
       height: 22px;
       background-color: #F4B942;
       opacity: 0.9;
-      border-radius: 2px;
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 22'%3E%3Cpath d='M0,0 L3,3 L0,6 L3,9 L0,12 L3,15 L0,18 L3,22 L67,22 L70,18 L67,15 L70,12 L67,9 L70,6 L67,3 L70,0 Z' fill='black'/%3E%3C/svg%3E");
+      mask-size: 100% 100%;
+      mask-repeat: no-repeat;
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 22'%3E%3Cpath d='M0,0 L3,3 L0,6 L3,9 L0,12 L3,15 L0,18 L3,22 L67,22 L70,18 L67,15 L70,12 L67,9 L70,6 L67,3 L70,0 Z' fill='black'/%3E%3C/svg%3E");
+      -webkit-mask-size: 100% 100%;
+      -webkit-mask-repeat: no-repeat;
     }
 
     .entry-text {
