@@ -191,7 +191,7 @@
       transform: translateX(-50%);
       width: 70px;
       height: 22px;
-      background-color: #F4B942;
+      background-color: #BC974A;
       opacity: 0.9;
       mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 22'%3E%3Cpath d='M0,0 L3,3 L0,6 L3,9 L0,12 L3,15 L0,18 L3,22 L67,22 L70,18 L67,15 L70,12 L67,9 L70,6 L67,3 L70,0 Z' fill='black'/%3E%3C/svg%3E");
       mask-size: 100% 100%;
@@ -240,20 +240,15 @@
       color: rgba(26,58,48,0.6);
     }
 
-    .entry-font-info .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-left: 8px;
-    }
-
-    .entry-font-info .dot.system {
-      background: #5fd068;
-    }
-
-    .entry-font-info .dot.proprietary {
-      background: #ff6b6b;
+    /* Faded tape for entries without font data */
+    .entry.no-font-data::before {
+      background-color: transparent;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 22'%3E%3Cpath d='M0,0 L3,3 L0,6 L3,9 L0,12 L3,15 L0,18 L3,22 L67,22 L70,18 L67,15 L70,12 L67,9 L70,6 L67,3 L70,0 Z' fill='%23A3AA9B' opacity='0.25'/%3E%3Cpath d='M0,0 L3,3 L0,6 L3,9 L0,12 L3,15 L0,18 L3,22 L67,22 L70,18 L67,15 L70,12 L67,9 L70,6 L67,3 L70,0 Z' fill='none' stroke='%23A3AA9B' stroke-width='0.5' stroke-dasharray='3,2' opacity='0.5'/%3E%3C/svg%3E");
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      mask-image: none;
+      -webkit-mask-image: none;
+      opacity: 1;
     }
 
     .entry-meta {
@@ -514,14 +509,11 @@
 
     const fontName = fontInfo.fontFamily?.split(',')[0]?.replace(/["']/g, '') || 'System';
     const weight = fontInfo.fontWeight || '400';
-    const hasData = hasFontData(fontInfo);
-    const dotClass = hasData ? 'system' : 'proprietary';
 
     return `
       <div class="entry-font-info">
         <div class="font-line">
           <span class="font-details">${escapeHtml(fontName)} <span class="font-weight">(${escapeHtml(weight)})</span></span>
-          <span class="dot ${dotClass}"></span>
         </div>
       </div>
     `;
@@ -557,8 +549,9 @@
       entriesEl.innerHTML = sorted.map(entry => {
         const fontInfo = normalizeFontInfo(entry);
         const displayText = normalizeText(entry.text);
+        const noFontDataClass = !hasFontData(fontInfo) ? 'no-font-data' : '';
         return `
-          <div class="entry" data-id="${entry.id}">
+          <div class="entry ${noFontDataClass}" data-id="${entry.id}">
             <div class="entry-text">${escapeHtml(displayText)}</div>
             ${formatFontInfo(fontInfo)}
             <div class="entry-meta">
