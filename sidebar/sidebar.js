@@ -121,7 +121,7 @@
       color: #ff6b6b;
       width: 32px;
       height: 32px;
-      border-radius: 8px;
+      border-radius: 5px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -299,18 +299,19 @@
 
     .footer {
       padding: 12px 16px;
-      border-top: 1px solid var(--ink);
+      background: rgba(0,0,0,0.25);
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
+      gap: 8px;
       position: relative;
     }
 
     .info-btn {
-      background: #F5F0DF;
-      border: none;
+      background: transparent;
+      border: 1.5px solid #F5F0DF;
       cursor: pointer;
-      color: #1a1a1a;
+      color: #F5F0DF;
       width: 32px;
       height: 32px;
       border-radius: 50%;
@@ -327,12 +328,29 @@
       opacity: 0.8;
     }
 
+    .info-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 335px;
+      height: 100vh;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: none;
+      z-index: 1;
+    }
+
+    .info-backdrop.show {
+      display: block;
+    }
+
     .info-popup {
       position: absolute;
       bottom: 52px;
       left: 50%;
       transform: translateX(-50%);
-      background: #F5F0DF;
+      background: #2F5F50;
+      border: 3px solid #b34015;
       border-radius: 12px;
       padding: 12px 16px;
       display: none;
@@ -341,6 +359,7 @@
       gap: 20px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       white-space: nowrap;
+      z-index: 2;
     }
 
     .info-popup.show {
@@ -348,7 +367,7 @@
     }
 
     .info-popup a {
-      color: var(--ink);
+      color: #F5F0DF;
       text-decoration: none;
       font-size: 13px;
       display: flex;
@@ -369,7 +388,7 @@
 
     .info-popup .credit-label {
       font-size: 9px;
-      color: rgba(26,58,48,0.6);
+      color: rgba(245,240,223,0.6);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -413,6 +432,7 @@
         </svg>
       </button>
       <button class="info-btn" id="info-btn" title="Info">i</button>
+      <div class="info-backdrop" id="info-backdrop"></div>
       <div class="info-popup" id="info-popup">
         <div class="credit-item">
           <span class="credit-label">Design Inspiration</span>
@@ -443,6 +463,7 @@
   const closeBtn = container.querySelector(".close-btn");
   const infoBtn = shadow.getElementById("info-btn");
   const infoPopup = shadow.getElementById("info-popup");
+  const infoBackdrop = shadow.getElementById("info-backdrop");
 
   // Track injected fonts to avoid duplicates
   const injectedFonts = new Set();
@@ -613,12 +634,14 @@
   infoBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     infoPopup.classList.toggle("show");
+    infoBackdrop.classList.toggle("show");
   });
 
   // Close popup when clicking outside
   container.addEventListener("click", (e) => {
     if (!infoPopup.contains(e.target) && e.target !== infoBtn) {
       infoPopup.classList.remove("show");
+      infoBackdrop.classList.remove("show");
     }
   });
 
