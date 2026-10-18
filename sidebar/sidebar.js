@@ -328,6 +328,145 @@
       opacity: 0.8;
     }
 
+    .theme-btn {
+      background: transparent;
+      border: 1.5px solid #F5F0DF;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .theme-btn:hover {
+      opacity: 0.8;
+    }
+
+    .theme-btn-inner {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: conic-gradient(#F5F2E8 0deg 120deg, #1a2a4a 120deg 240deg, #5c3d2e 240deg 360deg);
+    }
+
+    .theme-popup {
+      position: absolute;
+      bottom: 52px;
+      right: 16px;
+      background: #2F5F50;
+      border: 3px solid #b34015;
+      border-radius: 12px;
+      padding: 12px;
+      display: none;
+      flex-direction: row;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 2;
+    }
+
+    .theme-popup.show {
+      display: flex;
+    }
+
+    .theme-option {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .theme-option:hover {
+      transform: scale(1.1);
+    }
+
+    .theme-option.active {
+      border-color: #F5F0DF;
+    }
+
+    .theme-option.cream {
+      background: #F5F2E8;
+    }
+
+    .theme-option.blue {
+      background: #1a2a4a;
+    }
+
+    .theme-option.brown {
+      background: #5c3d2e;
+    }
+
+    /* Theme variations */
+    .sidebar.theme-cream {
+      --mat: #F5F2E8;
+      --grid-small: rgba(0,0,0,0.06);
+      --grid-large: rgba(0,0,0,0.12);
+      --cream: #1a3a30;
+    }
+
+    .sidebar.theme-cream .entry {
+      background: #EECE51;
+    }
+
+    .sidebar.theme-cream .entry-text {
+      color: #2a2a2a;
+    }
+
+    .sidebar.theme-cream .entry-font-info {
+      color: rgba(42,42,42,0.6);
+      border-top-color: rgba(42,42,42,0.15);
+    }
+
+    .sidebar.theme-cream .entry-font-info .font-line {
+      color: rgba(42,42,42,0.8);
+    }
+
+    .sidebar.theme-cream .entry-font-info .font-weight {
+      color: rgba(42,42,42,0.6);
+    }
+
+    .sidebar.theme-cream .entry-meta {
+      color: rgba(42,42,42,0.5);
+    }
+
+    .sidebar.theme-cream .text-input {
+      background: #EECE51;
+      color: #2a2a2a;
+    }
+
+    .sidebar.theme-cream .text-input::placeholder {
+      color: rgba(42,42,42,0.5);
+    }
+
+    .sidebar.theme-cream .footer {
+      background: rgba(0,0,0,0.08);
+    }
+
+    .sidebar.theme-cream .info-btn,
+    .sidebar.theme-cream .theme-btn {
+      border-color: #1a3a30;
+    }
+
+    .sidebar.theme-cream .theme-btn-inner {
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+
+    .sidebar.theme-blue {
+      --mat: #1a2a4a;
+      --grid-small: rgba(255,255,255,0.06);
+      --grid-large: rgba(255,255,255,0.12);
+    }
+
+    .sidebar.theme-brown {
+      --mat: #5c3d2e;
+      --grid-small: rgba(255,165,0,0.12);
+      --grid-large: rgba(255,165,0,0.2);
+    }
+
     .info-backdrop {
       position: fixed;
       top: 0;
@@ -423,7 +562,15 @@
       <div class="grid" id="entries"></div>
     </div>
     <div class="footer hidden" id="footer">
-      <button class="trash-btn" id="trash-btn" title="Clear All">
+      <button class="theme-btn" id="theme-btn" title="Change Theme">
+          <div class="theme-btn-inner"></div>
+        </button>
+        <div class="theme-popup" id="theme-popup">
+          <div class="theme-option cream" data-theme="cream" title="Cream"></div>
+          <div class="theme-option blue" data-theme="blue" title="Dark Blue"></div>
+          <div class="theme-option brown" data-theme="brown" title="Brown"></div>
+        </div>
+        <button class="trash-btn" id="trash-btn" title="Clear All">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -464,6 +611,9 @@
   const infoBtn = shadow.getElementById("info-btn");
   const infoPopup = shadow.getElementById("info-popup");
   const infoBackdrop = shadow.getElementById("info-backdrop");
+  const themeBtn = shadow.getElementById("theme-btn");
+  const themePopup = shadow.getElementById("theme-popup");
+  const themeOptions = shadow.querySelectorAll(".theme-option");
 
   // Track injected fonts to avoid duplicates
   const injectedFonts = new Set();
@@ -643,6 +793,41 @@
       infoPopup.classList.remove("show");
       infoBackdrop.classList.remove("show");
     }
+    if (!themePopup.contains(e.target) && !themeBtn.contains(e.target)) {
+      themePopup.classList.remove("show");
+    }
+  });
+
+  // Toggle theme popup
+  themeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    themePopup.classList.toggle("show");
+    infoPopup.classList.remove("show");
+    infoBackdrop.classList.remove("show");
+  });
+
+  // Handle theme selection
+  function setTheme(theme) {
+    container.classList.remove("theme-cream", "theme-blue", "theme-brown");
+    if (theme && theme !== "default") {
+      container.classList.add(`theme-${theme}`);
+    }
+    themeOptions.forEach(opt => {
+      opt.classList.toggle("active", opt.dataset.theme === theme);
+    });
+    chrome.storage.local.set({ theme });
+  }
+
+  themeOptions.forEach(option => {
+    option.addEventListener("click", () => {
+      setTheme(option.dataset.theme);
+      themePopup.classList.remove("show");
+    });
+  });
+
+  // Load saved theme
+  chrome.storage.local.get("theme", ({ theme }) => {
+    if (theme) setTheme(theme);
   });
 
   // Listen for new entries
