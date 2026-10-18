@@ -2,6 +2,145 @@
 if (!window.__typeBucketContentLoaded) {
   window.__typeBucketContentLoaded = true;
 
+  // Font map: stores discovered fonts { fontFamily -> { url, weight, style } }
+  const fontMap = new Map();
+
+  // Parse CSS text to extract @font-face rules
+  function parseFontFacesFromCSS(cssText, baseUrl) {
+    const fonts = [];
+    // Match @font-face blocks
+    const fontFaceRegex = /@font-face\s*\{([^}]+)\}/gi;
+    let match;
+
+    while ((match = fontFaceRegex.exec(cssText)) !== null) {
+      const block = match[1];
+
+      // Extract font-family
+      const familyMatch = block.match(/font-family\s*:\s*["']?([^"';\n]+)["']?/i);
+      if (!familyMatch) continue;
+      const family = familyMatch[1].trim();
+
+      // Extract src URL (prefer woff2)
+      const srcMatch = block.match(/src\s*:[^;]+url\(["']?([^"')]+\.woff2?)["']?\)/i);
+      if (!srcMatch) continue;
+      let url = srcMatch[1].trim();
+
+      // Resolve relative URLs
+      if (baseUrl && !url.startsWith('http') && !url.startsWith('data:')) {
+        try {
+          url = new URL(url, baseUrl).href;
+        } catch (e) {
+          console.log('[TypeBucket] Failed to resolve URL:', url);
+          continue;
+        }
+      }
+
+      // Extract weight and style
+      const weightMatch = block.match(/font-weight\s*:\s*(\d+|normal|bold)/i);
+      const styleMatch = block.match(/font-style\s*:\s*(normal|italic|oblique)/i);
+
+      fonts.push({
+        family,
+        url,
+        weight: weightMatch ? weightMatch[1] : '400',
+        style: styleMatch ? styleMatch[1] : 'normal'
+      });
+    }
+
+    return fonts;
+  }
+
+  // Fetch CSS via background script and parse for fonts
+  async function fetchAndParseCSSForFonts(cssUrl) {
+    console.log('[TypeBucket] Fetching CSS for fonts:', cssUrl);
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "FETCH_CSS",
+        url: cssUrl
+      });
+
+      if (!response?.cssText) {
+        console.log('[TypeBucket] No CSS text returned for:', cssUrl);
+        return;
+      }
+
+      const fonts = parseFontFacesFromCSS(response.cssText, cssUrl);
+      console.log('[TypeBucket] Found fonts in CSS:', fonts.length);
+
+      // Add to font map
+      for (const font of fonts) {
+        const key = font.family.toLowerCase();
+        if (!fontMap.has(key)) {
+          fontMap.set(key, []);
+        }
+        fontMap.get(key).push(font);
+        console.log('[TypeBucket] Added to font map:', font.family, font.url);
+      }
+
+      // Also check for @import rules in the CSS
+      const importRegex = /@import\s+(?:url\()?["']?([^"')\s;]+)["']?\)?/gi;
+      let importMatch;
+      while ((importMatch = importRegex.exec(response.cssText)) !== null) {
+        let importUrl = importMatch[1];
+        if (!importUrl.startsWith('http')) {
+          try {
+            importUrl = new URL(importUrl, cssUrl).href;
+          } catch (e) {
+            continue;
+          }
+        }
+        // Recursively fetch imported CSS
+        await fetchAndParseCSSForFonts(importUrl);
+      }
+    } catch (e) {
+      console.error('[TypeBucket] Error fetching CSS:', e);
+    }
+  }
+
+  // Scan page for external stylesheets and discover fonts
+  async function discoverFonts() {
+    console.log('[TypeBucket] Starting font discovery...');
+
+    // 1. Find all <link rel="stylesheet"> tags
+    const linkTags = document.querySelectorAll('link[rel="stylesheet"]');
+    for (const link of linkTags) {
+      if (link.href) {
+        await fetchAndParseCSSForFonts(link.href);
+      }
+    }
+
+    // 2. Scan inline <style> tags
+    const styleTags = document.querySelectorAll('style');
+    for (const style of styleTags) {
+      const fonts = parseFontFacesFromCSS(style.textContent, window.location.href);
+      for (const font of fonts) {
+        const key = font.family.toLowerCase();
+        if (!fontMap.has(key)) {
+          fontMap.set(key, []);
+        }
+        fontMap.get(key).push(font);
+      }
+    }
+
+    // 3. Try to scan document.styleSheets for @import rules we can access
+    for (const sheet of document.styleSheets) {
+      try {
+        const rules = sheet.cssRules || sheet.rules;
+        if (!rules) continue;
+
+        for (const rule of rules) {
+          if (rule instanceof CSSImportRule && rule.href) {
+            await fetchAndParseCSSForFonts(rule.href);
+          }
+        }
+      } catch (e) {
+        // CORS blocked - we already handle this via <link> tags
+      }
+    }
+
+    console.log('[TypeBucket] Font discovery complete. Found', fontMap.size, 'font families');
+  }
+
   // Get comprehensive font info from selected text
   function getSelectionFontInfo() {
     const selection = window.getSelection();
@@ -36,7 +175,7 @@ if (!window.__typeBucketContentLoaded) {
 
     // Try to find @font-face rule and extract src
     const fontName = extractPrimaryFontName(fontInfo.fontFamily);
-    const fontFaceInfo = findFontFace(fontName);
+    const fontFaceInfo = findFontFace(fontName, fontInfo.fontWeight);
 
     if (fontFaceInfo) {
       fontInfo.fontSrc = fontFaceInfo.src;
@@ -74,9 +213,30 @@ if (!window.__typeBucketContentLoaded) {
   }
 
   // Find @font-face rule for a given font name
-  function findFontFace(fontName) {
+  function findFontFace(fontName, fontWeight) {
     if (!fontName) return null;
+    console.log('[TypeBucket] Looking for font-face:', fontName, 'weight:', fontWeight);
 
+    // First check our discovered font map
+    const key = fontName.toLowerCase();
+    if (fontMap.has(key)) {
+      const fonts = fontMap.get(key);
+      console.log('[TypeBucket] Found in font map:', fonts.length, 'variants');
+
+      // Try to match by weight, or return first
+      const weightStr = String(fontWeight || '400');
+      const matched = fonts.find(f => String(f.weight) === weightStr) || fonts[0];
+
+      if (matched) {
+        console.log('[TypeBucket] Matched from font map:', matched.url);
+        return {
+          src: matched.url,
+          fullSrc: matched.url
+        };
+      }
+    }
+
+    // Fallback: try document.styleSheets (for same-origin CSS)
     try {
       for (const sheet of document.styleSheets) {
         try {
@@ -86,11 +246,12 @@ if (!window.__typeBucketContentLoaded) {
           for (const rule of rules) {
             if (rule instanceof CSSFontFaceRule) {
               const family = rule.style.getPropertyValue('font-family').replace(/["']/g, '').trim();
+              const src = rule.style.getPropertyValue('src');
+
               if (family.toLowerCase() === fontName.toLowerCase()) {
-                const src = rule.style.getPropertyValue('src');
-                // Extract URL from src
                 const urlMatch = src.match(/url\(["']?([^"')]+)["']?\)/);
                 if (urlMatch) {
+                  console.log('[TypeBucket] Matched from styleSheets:', urlMatch[1]);
                   return {
                     src: urlMatch[1],
                     fullSrc: src
@@ -100,7 +261,7 @@ if (!window.__typeBucketContentLoaded) {
             }
           }
         } catch (e) {
-          // CORS - can't access cross-origin stylesheet
+          // CORS - skip
           continue;
         }
       }
@@ -108,28 +269,30 @@ if (!window.__typeBucketContentLoaded) {
       console.error('Error finding font-face:', e);
     }
 
+    console.log('[TypeBucket] No font-face found for:', fontName);
     return null;
   }
 
-  // Fetch font and convert to base64
+  // Fetch font via background script (bypasses CORS)
   async function fetchFontAsBase64(url) {
     try {
       // Handle relative URLs
       const absoluteUrl = new URL(url, window.location.href).href;
 
-      const response = await fetch(absoluteUrl, { mode: 'cors' });
-      if (!response.ok) return null;
-
-      const blob = await response.blob();
-
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(blob);
+      // Send to background script which has elevated permissions
+      const response = await chrome.runtime.sendMessage({
+        type: "FETCH_FONT",
+        url: absoluteUrl
       });
+
+      if (response?.fontData) {
+        console.log('[TypeBucket] Font fetched via background:', absoluteUrl);
+        return response.fontData;
+      }
+
+      return null;
     } catch (e) {
-      console.error('Error fetching font:', e);
+      console.error('[TypeBucket] Error fetching font:', e);
       return null;
     }
   }
@@ -157,5 +320,12 @@ if (!window.__typeBucketContentLoaded) {
       sendResponse({ ok: true });
     }
   });
+
+  // Discover fonts when page is ready
+  if (document.readyState === 'complete') {
+    discoverFonts();
+  } else {
+    window.addEventListener('load', discoverFonts);
+  }
 
 }

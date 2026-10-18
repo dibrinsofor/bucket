@@ -9,6 +9,9 @@
     "activeTab",
     "scripting"
   ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "scripts": ["browser-polyfill.js", "background.js"],
     "type": "module"
@@ -21,9 +24,13 @@
     }
   ],
   "action": {},
+  "sidebar_action": {
+    "default_title": "Type Bucket",
+    "default_panel": "sidebar/panel.html"
+  },
   "web_accessible_resources": [
     {
-      "resources": ["sidebar/sidebar.html", "sidebar/sidebar.css"],
+      "resources": ["sidebar/sidebar.html", "sidebar/sidebar.css", "sidebar/panel.html"],
       "matches": ["<all_urls>"]
     }
   ]
