@@ -1,3 +1,47 @@
+// Logger - stores logs in storage for debugging
+const Logger = {
+  MAX_LOGS: 30,
+
+  async log(type, message, data = {}) {
+    const { logs = [] } = await browser.storage.local.get("logs");
+
+    // Extract domain from URL if present
+    let domain = null;
+    if (data.url) {
+      try {
+        domain = new URL(data.url).hostname;
+      } catch (e) {
+        domain = data.url;
+      }
+    }
+
+    logs.push({
+      type,
+      message,
+      domain,
+      fontFamily: data.fontFamily || null,
+      reason: data.reason || null,
+      timestamp: new Date().toISOString()
+    });
+
+    // Keep only last MAX_LOGS entries
+    if (logs.length > this.MAX_LOGS) {
+      logs.splice(0, logs.length - this.MAX_LOGS);
+    }
+
+    await browser.storage.local.set({ logs });
+  },
+
+  async getLogs() {
+    const { logs = [] } = await browser.storage.local.get("logs");
+    return logs;
+  },
+
+  async clear() {
+    await browser.storage.local.set({ logs: [] });
+  }
+};
+
 // Get unique key for a font (family + weight)
 function getFontKey(fontInfo) {
   if (!fontInfo?.fontFamily) return null;
@@ -52,7 +96,7 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
     });
 
     if (isDuplicate) {
-      console.log('[TypeBucket] Duplicate font, skipping:', newFontKey);
+      Logger.log('info', 'Duplicate font skipped', { fontFamily: newFontKey });
       return;
     }
 
@@ -86,53 +130,61 @@ browser.action.onClicked.addListener(async (tab) => {
 
 // Fetch font file (bypasses CORS due to host_permissions)
 async function fetchFontFromBackground(url) {
-  console.log('[TypeBucket] Background fetching font:', url);
   try {
     const response = await fetch(url);
-    console.log('[TypeBucket] Fetch response:', response.status, response.ok);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      Logger.log('error', 'Font fetch failed', { url, reason: `HTTP ${response.status}` });
+      return null;
+    }
 
     const blob = await response.blob();
-    console.log('[TypeBucket] Font blob size:', blob.size);
 
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        console.log('[TypeBucket] Font converted to base64, length:', reader.result?.length);
+        Logger.log('success', 'Font fetched', { url });
         resolve(reader.result);
       };
       reader.onerror = () => {
-        console.error('[TypeBucket] FileReader error');
+        Logger.log('error', 'Font read failed', { url, reason: 'FileReader error' });
         resolve(null);
       };
       reader.readAsDataURL(blob);
     });
   } catch (e) {
-    console.error('[TypeBucket] Background fetch error:', e);
+    Logger.log('error', 'Font fetch failed', { url, reason: e.message });
     return null;
   }
 }
 
 // Fetch CSS text (bypasses CORS due to host_permissions)
 async function fetchCSSFromBackground(url) {
-  console.log('[TypeBucket] Background fetching CSS:', url);
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      console.log('[TypeBucket] CSS fetch failed:', response.status);
+      Logger.log('error', 'CSS fetch failed', { url, reason: `HTTP ${response.status}` });
       return null;
     }
     const text = await response.text();
-    console.log('[TypeBucket] CSS fetched, length:', text.length);
     return text;
   } catch (e) {
-    console.error('[TypeBucket] CSS fetch error:', e);
+    Logger.log('error', 'CSS fetch failed', { url, reason: e.message });
     return null;
   }
 }
 
 // Handle messages from sidebar and content scripts
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "LOG") {
+    Logger.log(message.logType, message.message, message.data || {});
+    return false;
+  }
+
+  if (message.type === "GET_LOGS") {
+    Logger.getLogs().then(logs => sendResponse({ logs }));
+    return true;
+  }
+
   if (message.type === "FETCH_FONT") {
     // Fetch font with elevated permissions
     fetchFontFromBackground(message.url).then(fontData => {

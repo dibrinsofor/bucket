@@ -2,6 +2,11 @@
 if (!window.__typeBucketContentLoaded) {
   window.__typeBucketContentLoaded = true;
 
+  // Log helper - sends to background script
+  function log(logType, message, data = {}) {
+    chrome.runtime.sendMessage({ type: "LOG", logType, message, data });
+  }
+
   // Font map: stores discovered fonts { fontFamily -> { url, weight, style } }
   const fontMap = new Map();
 
@@ -30,7 +35,7 @@ if (!window.__typeBucketContentLoaded) {
         try {
           url = new URL(url, baseUrl).href;
         } catch (e) {
-          console.log('[TypeBucket] Failed to resolve URL:', url);
+          log('error', 'Failed to resolve font URL', { url });
           continue;
         }
       }
@@ -52,7 +57,6 @@ if (!window.__typeBucketContentLoaded) {
 
   // Fetch CSS via background script and parse for fonts
   async function fetchAndParseCSSForFonts(cssUrl) {
-    console.log('[TypeBucket] Fetching CSS for fonts:', cssUrl);
     try {
       const response = await chrome.runtime.sendMessage({
         type: "FETCH_CSS",
@@ -60,12 +64,10 @@ if (!window.__typeBucketContentLoaded) {
       });
 
       if (!response?.cssText) {
-        console.log('[TypeBucket] No CSS text returned for:', cssUrl);
         return;
       }
 
       const fonts = parseFontFacesFromCSS(response.cssText, cssUrl);
-      console.log('[TypeBucket] Found fonts in CSS:', fonts.length);
 
       // Add to font map
       for (const font of fonts) {
@@ -74,7 +76,6 @@ if (!window.__typeBucketContentLoaded) {
           fontMap.set(key, []);
         }
         fontMap.get(key).push(font);
-        console.log('[TypeBucket] Added to font map:', font.family, font.url);
       }
 
       // Also check for @import rules in the CSS
@@ -93,13 +94,12 @@ if (!window.__typeBucketContentLoaded) {
         await fetchAndParseCSSForFonts(importUrl);
       }
     } catch (e) {
-      console.error('[TypeBucket] Error fetching CSS:', e);
+      log('error', 'Error fetching CSS', { url: cssUrl, reason: e.message });
     }
   }
 
   // Scan page for external stylesheets and discover fonts
   async function discoverFonts() {
-    console.log('[TypeBucket] Starting font discovery...');
 
     // 1. Find all <link rel="stylesheet"> tags
     const linkTags = document.querySelectorAll('link[rel="stylesheet"]');
@@ -138,7 +138,6 @@ if (!window.__typeBucketContentLoaded) {
       }
     }
 
-    console.log('[TypeBucket] Font discovery complete. Found', fontMap.size, 'font families');
   }
 
   // Get comprehensive font info from selected text
@@ -215,20 +214,17 @@ if (!window.__typeBucketContentLoaded) {
   // Find @font-face rule for a given font name
   function findFontFace(fontName, fontWeight) {
     if (!fontName) return null;
-    console.log('[TypeBucket] Looking for font-face:', fontName, 'weight:', fontWeight);
 
     // First check our discovered font map
     const key = fontName.toLowerCase();
     if (fontMap.has(key)) {
       const fonts = fontMap.get(key);
-      console.log('[TypeBucket] Found in font map:', fonts.length, 'variants');
 
       // Try to match by weight, or return first
       const weightStr = String(fontWeight || '400');
       const matched = fonts.find(f => String(f.weight) === weightStr) || fonts[0];
 
       if (matched) {
-        console.log('[TypeBucket] Matched from font map:', matched.url);
         return {
           src: matched.url,
           fullSrc: matched.url
@@ -251,7 +247,6 @@ if (!window.__typeBucketContentLoaded) {
               if (family.toLowerCase() === fontName.toLowerCase()) {
                 const urlMatch = src.match(/url\(["']?([^"')]+)["']?\)/);
                 if (urlMatch) {
-                  console.log('[TypeBucket] Matched from styleSheets:', urlMatch[1]);
                   return {
                     src: urlMatch[1],
                     fullSrc: src
@@ -266,10 +261,10 @@ if (!window.__typeBucketContentLoaded) {
         }
       }
     } catch (e) {
-      console.error('Error finding font-face:', e);
+      // CORS or other error
     }
 
-    console.log('[TypeBucket] No font-face found for:', fontName);
+    log('error', 'Font not found', { fontFamily: fontName, reason: 'No @font-face rule found' });
     return null;
   }
 
@@ -286,13 +281,12 @@ if (!window.__typeBucketContentLoaded) {
       });
 
       if (response?.fontData) {
-        console.log('[TypeBucket] Font fetched via background:', absoluteUrl);
         return response.fontData;
       }
 
       return null;
     } catch (e) {
-      console.error('[TypeBucket] Error fetching font:', e);
+      log('error', 'Error fetching font', { url: absoluteUrl, reason: e.message });
       return null;
     }
   }

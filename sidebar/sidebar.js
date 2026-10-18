@@ -313,7 +313,7 @@
 
     .info-btn {
       background: transparent;
-      border: 1.5px solid #F5F0DF;
+      border: none;
       cursor: pointer;
       color: #F5F0DF;
       width: 32px;
@@ -329,6 +329,24 @@
     }
 
     .info-btn:hover {
+      opacity: 0.8;
+    }
+
+    .bug-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-size: 14px;
+    }
+
+    .bug-btn:hover {
       opacity: 0.8;
     }
 
@@ -460,9 +478,12 @@
       background: rgba(0,0,0,0.08);
     }
 
-    .sidebar.theme-cream .info-btn,
     .sidebar.theme-cream .theme-btn {
       border-color: #1a3a30;
+    }
+
+    .sidebar.theme-cream .info-btn {
+      color: #1a3a30;
     }
 
     .sidebar.theme-cream .theme-btn-inner {
@@ -593,7 +614,8 @@
           <line x1="14" y1="11" x2="14" y2="17"></line>
         </svg>
       </button>
-      <button class="info-btn" id="info-btn" title="Info">i</button>
+      <button class="bug-btn" id="bug-btn" title="Report Issue">🐛</button>
+        <button class="info-btn" id="info-btn" title="Info">i</button>
       <div class="info-backdrop" id="info-backdrop"></div>
       <div class="info-popup" id="info-popup">
         <div class="credit-item">
@@ -629,6 +651,7 @@
   const themeBtn = shadow.getElementById("theme-btn");
   const themePopup = shadow.getElementById("theme-popup");
   const themeOptions = shadow.querySelectorAll(".theme-option");
+  const bugBtn = shadow.getElementById("bug-btn");
 
   // Track injected fonts to avoid duplicates
   const injectedFonts = new Set();
@@ -654,7 +677,6 @@
     shadow.appendChild(styleEl);
     injectedFonts.add(fontName);
 
-    console.log('[TypeBucket] Injected font:', fontName);
     return fontName;
   }
 
@@ -699,7 +721,7 @@
     return `
       <div class="entry-font-info">
         <div class="font-line">
-          <span class="font-details">${escapeHtml(fontName)} <span class="font-weight">(${escapeHtml(weight)})</span></span>
+          <span class="font-details" title="${escapeHtml(fontName)} (${escapeHtml(weight)})">${escapeHtml(fontName)} <span class="font-weight">(${escapeHtml(weight)})</span></span>
         </div>
       </div>
     `;
@@ -709,19 +731,6 @@
   function loadEntries() {
     chrome.runtime.sendMessage({ type: "GET_ENTRIES" }, (response) => {
       const entries = response?.entries || [];
-
-      // DEBUG: Log current state
-      console.log('[TypeBucket] Entries loaded:', entries.length);
-      entries.forEach((entry, i) => {
-        const fontInfo = entry.fontInfo || {};
-        const hasData = !!fontInfo.fontData;
-        console.log(`[TypeBucket] Entry ${i}:`, {
-          text: entry.text?.substring(0, 30) + '...',
-          fontFamily: fontInfo.fontFamily,
-          hasFontData: hasData,
-          indicator: hasData ? 'GREEN' : 'RED'
-        });
-      });
 
       if (entries.length === 0) {
         entriesEl.innerHTML = `<div class="empty-state">No saved text yet.<br>Highlight text and right-click to save.</div>`;
@@ -736,12 +745,18 @@
         const fontInfo = normalizeFontInfo(entry);
         const displayText = normalizeText(entry.text);
         const noFontDataClass = !hasFontData(fontInfo) ? 'no-font-data' : '';
+        let domain = 'Unknown';
+        try {
+          domain = new URL(entry.url).hostname.replace('www.', '');
+        } catch (e) {}
+        const sourceTitle = entry.title || '';
+        const sourceDisplay = sourceTitle ? `${domain} - ${sourceTitle}` : domain;
         return `
           <div class="entry ${noFontDataClass}" data-id="${entry.id}">
             <div class="entry-text">${escapeHtml(displayText)}</div>
             ${formatFontInfo(fontInfo)}
             <div class="entry-meta">
-              <span class="entry-source" title="${escapeHtml(entry.title || '')}">${escapeHtml(entry.title || 'Unknown')}</span>
+              <span class="entry-source" title="${escapeHtml(sourceDisplay)}">${escapeHtml(sourceDisplay)}</span>
             </div>
           </div>
         `;
@@ -787,9 +802,7 @@
   // Clear all
   trashBtn.addEventListener("click", () => {
     if (confirm("Delete all saved text?")) {
-      console.log('[TypeBucket] Clearing all entries...');
       chrome.runtime.sendMessage({ type: "CLEAR_ALL" }, () => {
-        console.log('[TypeBucket] All entries cleared');
         loadEntries();
       });
     }
@@ -845,13 +858,47 @@
     if (theme) setTheme(theme);
   });
 
+  // Report issue
+  bugBtn.addEventListener("click", () => {
+    chrome.storage.local.get(["bucket", "logs"], ({ bucket = [], logs = [] }) => {
+      const theme = container.classList.contains("theme-cream") ? "cream" :
+                    container.classList.contains("theme-blue") ? "blue" :
+                    container.classList.contains("theme-brown") ? "brown" : "default";
+
+      const logsText = logs.length > 0
+        ? logs.map(l => `[${l.type}] ${l.message}${l.domain ? ` (${l.domain})` : ''}${l.fontFamily ? ` - ${l.fontFamily}` : ''}${l.reason ? ` - ${l.reason}` : ''}`).join('\n')
+        : 'No logs';
+
+      const body = `## Bug Description
+<!-- Describe what went wrong -->
+
+## Steps to Reproduce
+1.
+2.
+3.
+
+## Expected Behavior
+<!-- What should have happened -->
+
+## Debug Info
+- Browser: ${navigator.userAgent.includes("Firefox") ? "Firefox" : "Chrome/Other"}
+- Entries: ${bucket.length}
+- Theme: ${theme}
+
+## Font Logs
+\`\`\`
+${logsText}
+\`\`\`
+`;
+
+      const url = `https://github.com/dibrinsofor/bucket/issues/new?title=Bug%20Report&body=${encodeURIComponent(body)}&labels=bug`;
+      window.open(url, "_blank");
+    });
+  });
+
   // Listen for new entries
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "ENTRY_ADDED") {
-      console.log('[TypeBucket] New entry added:', {
-        text: message.entry?.text?.substring(0, 30) + '...',
-        fontInfo: message.entry?.fontInfo
-      });
       loadEntries();
     }
   });
