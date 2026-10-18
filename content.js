@@ -158,21 +158,4 @@ if (!window.__typeBucketContentLoaded) {
     }
   });
 
-  // Check if sidebar should be open on page load
-  function checkAndOpenSidebar() {
-    chrome.storage.local.get("sidebarOpen", ({ sidebarOpen }) => {
-      if (sidebarOpen && !document.getElementById("type-bucket-sidebar")) {
-        chrome.runtime.sendMessage({ type: "OPEN_SIDEBAR" });
-      }
-    });
-  }
-
-  // Wait for DOM to be ready
-  if (document.readyState === "complete" || document.readyState === "interactive") {
-    setTimeout(checkAndOpenSidebar, 100);
-  } else {
-    document.addEventListener("DOMContentLoaded", () => {
-      setTimeout(checkAndOpenSidebar, 100);
-    });
-  }
 }

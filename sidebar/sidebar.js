@@ -7,12 +7,8 @@
     if (existing) {
       existing.remove();
       document.body.style.marginLeft = "";
-      chrome.storage.local.set({ sidebarOpen: false });
       return;
     }
-
-    // Mark sidebar as open
-    chrome.storage.local.set({ sidebarOpen: true });
 
     createSidebar();
   }
@@ -29,6 +25,8 @@
   // Inject styles
   const styles = document.createElement("style");
   styles.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+
     :host {
       all: initial;
     }
@@ -43,14 +41,47 @@
       --mat: #2F5F50;
       --cream: #F5F2E8;
       --ink: #1a3a30;
+      --grid-small: rgba(255,255,255,0.08);
+      --grid-large: rgba(255,255,255,0.15);
       position: fixed;
       top: 0;
       left: 0;
       width: 335px;
       height: 100vh;
-      background: var(--mat);
+      background-color: var(--mat);
+      background-image:
+        /* Large grid (100px) */
+        repeating-linear-gradient(
+          0deg,
+          var(--grid-large) 0px,
+          var(--grid-large) 1px,
+          transparent 1px,
+          transparent 100px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          var(--grid-large) 0px,
+          var(--grid-large) 1px,
+          transparent 1px,
+          transparent 100px
+        ),
+        /* Small grid (20px) */
+        repeating-linear-gradient(
+          0deg,
+          var(--grid-small) 0px,
+          var(--grid-small) 1px,
+          transparent 1px,
+          transparent 20px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          var(--grid-small) 0px,
+          var(--grid-small) 1px,
+          transparent 1px,
+          transparent 20px
+        );
       border-right: 1px solid var(--ink);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Rubik', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       font-size: 14px;
       z-index: 2147483647;
       display: flex;
@@ -63,7 +94,6 @@
       justify-content: space-between;
       align-items: center;
       padding: 16px;
-      border-bottom: 1px solid var(--ink);
     }
 
     .header-left {
@@ -85,18 +115,20 @@
     }
 
     .trash-btn {
-      background: none;
+      background: #F5F0DF;
       border: none;
       cursor: pointer;
       color: #ff6b6b;
-      padding: 4px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .trash-btn:hover {
-      color: #ff8a8a;
+      opacity: 0.8;
     }
 
     .trash-btn svg {
@@ -105,18 +137,24 @@
     }
 
     .close-btn {
-      background: none;
+      background: #F5F0DF;
       border: none;
-      font-size: 24px;
+      font-size: 18px;
       cursor: pointer;
-      color: var(--cream);
-      line-height: 1;
-      padding: 4px;
-      opacity: 0.7;
+      color: var(--ink);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 0;
+      padding-bottom: 2px;
     }
 
     .close-btn:hover {
-      opacity: 1;
+      opacity: 0.8;
     }
 
     .content {
@@ -128,23 +166,40 @@
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 16px;
+      padding-top: 6px;
     }
 
     .entry {
-      background: rgba(0,0,0,0.15);
-      border: 1px solid var(--ink);
-      padding: 14px;
+      background: #F5F0DF;
+      border: none;
+      border-radius: 0;
+      padding: 20px;
+      padding-top: 28px;
       position: relative;
       break-inside: avoid;
-      overflow: hidden;
+      overflow: visible;
       min-width: 0;
+      margin-top: 14px;
+    }
+
+    .entry::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 22px;
+      background-color: #F4B942;
+      opacity: 0.9;
+      border-radius: 2px;
     }
 
     .entry-text {
       font-size: 14px !important;
       line-height: 1.4 !important;
-      color: var(--cream);
+      color: var(--ink);
       word-break: break-word;
       margin-bottom: 12px;
       max-height: 100px;
@@ -156,15 +211,15 @@
 
     .entry-font-info {
       font-size: 10px;
-      color: rgba(245,242,232,0.6);
+      color: rgba(26,58,48,0.6);
       margin-top: 10px;
       padding-top: 8px;
-      border-top: 1px solid var(--ink);
+      border-top: 1px solid rgba(26,58,48,0.15);
       line-height: 1.4;
     }
 
     .entry-font-info .font-line {
-      color: rgba(245,242,232,0.8);
+      color: rgba(26,58,48,0.8);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -177,7 +232,7 @@
     }
 
     .entry-font-info .font-weight {
-      color: rgba(245,242,232,0.6);
+      color: rgba(26,58,48,0.6);
     }
 
     .entry-font-info .dot {
@@ -198,7 +253,7 @@
 
     .entry-meta {
       font-size: 10px;
-      color: rgba(245,242,232,0.5);
+      color: rgba(26,58,48,0.5);
     }
 
     .entry-source {
@@ -218,34 +273,110 @@
 
     .input-area {
       padding: 12px 16px;
-      border-bottom: 1px solid var(--ink);
     }
 
     .text-input {
       width: 100%;
-      padding: 12px 20px;
-      border: 1px solid var(--ink);
-      border-radius: 9999px;
+      min-height: 56px;
+      padding: 16px 20px;
+      border: none;
+      border-radius: 12px;
       font-size: 13px;
+      font-weight: 600;
       font-family: inherit;
-      background: rgba(0,0,0,0.2);
-      color: var(--cream);
+      background: #f5f0df;
+      color: var(--ink);
     }
 
     .text-input::placeholder {
-      color: rgba(245,242,232,0.5);
+      color: rgba(26,58,48,0.5);
+      font-weight: 600;
     }
 
     .text-input:focus {
       outline: none;
-      border-color: rgba(245,242,232,0.4);
     }
 
     .footer {
       padding: 12px 16px;
       border-top: 1px solid var(--ink);
       display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+    }
+
+    .info-btn {
+      background: #F5F0DF;
+      border: none;
+      cursor: pointer;
+      color: #1a1a1a;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
       justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      font-style: italic;
+      font-family: Georgia, serif;
+    }
+
+    .info-btn:hover {
+      opacity: 0.8;
+    }
+
+    .info-popup {
+      position: absolute;
+      bottom: 52px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #F5F0DF;
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: none;
+      flex-direction: row;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      white-space: nowrap;
+    }
+
+    .info-popup.show {
+      display: flex;
+    }
+
+    .info-popup a {
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-popup a:hover {
+      opacity: 0.7;
+    }
+
+    .info-popup .credit-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .info-popup .credit-label {
+      font-size: 9px;
+      color: rgba(26,58,48,0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-popup .logo-img {
+      height: 20px;
+      width: auto;
     }
 
     .hidden {
@@ -259,6 +390,7 @@
   container.innerHTML = `
     <div class="header">
       <div class="header-left">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f46b55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7c0-2.8 2.2-5 5-5h2c2.8 0 5 2.2 5 5"/><path d="M5 11h14"/><path d="m18 11-.8 9c-.1 1.1-1.1 2-2.2 2H9c-1.1 0-2.1-.9-2.2-2L6 11"/></svg>
         <h1>Type Bucket</h1>
       </div>
       <div class="header-right">
@@ -280,6 +412,19 @@
           <line x1="14" y1="11" x2="14" y2="17"></line>
         </svg>
       </button>
+      <button class="info-btn" id="info-btn" title="Info">i</button>
+      <div class="info-popup" id="info-popup">
+        <div class="credit-item">
+          <span class="credit-label">Design Inspiration</span>
+          <a href="https://mochi-icons.com" target="_blank">mochi-icons.com</a>
+        </div>
+        <div class="credit-item">
+          <span class="credit-label">Built by</span>
+          <a href="https://dibrinsofor.github.io" target="_blank">
+            <img src="https://dibrinsofor.github.io/images/footer.png" alt="Dibri Nsofor" class="logo-img">
+          </a>
+        </div>
+      </div>
     </div>
   `;
 
@@ -296,6 +441,8 @@
   const footerEl = shadow.getElementById("footer");
   const textInput = shadow.getElementById("text-input");
   const closeBtn = container.querySelector(".close-btn");
+  const infoBtn = shadow.getElementById("info-btn");
+  const infoPopup = shadow.getElementById("info-popup");
 
   // Track injected fonts to avoid duplicates
   const injectedFonts = new Set();
@@ -451,7 +598,6 @@
   closeBtn.addEventListener("click", () => {
     sidebar.remove();
     document.body.style.marginLeft = "";
-    chrome.storage.local.set({ sidebarOpen: false });
   });
 
   // Clear all
@@ -462,6 +608,19 @@
         console.log('[TypeBucket] All entries cleared');
         loadEntries();
       });
+    }
+  });
+
+  // Toggle info popup
+  infoBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    infoPopup.classList.toggle("show");
+  });
+
+  // Close popup when clicking outside
+  container.addEventListener("click", (e) => {
+    if (!infoPopup.contains(e.target) && e.target !== infoBtn) {
+      infoPopup.classList.remove("show");
     }
   });
 
