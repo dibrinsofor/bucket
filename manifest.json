@@ -3,6 +3,12 @@
   "name": "Type Bucket",
   "version": "1.0.0",
   "description": "Save highlighted text with a right-click",
+  "icons": {
+    "16": "icons/bucket-16.svg",
+    "32": "icons/bucket-32.svg",
+    "48": "icons/bucket-32.svg",
+    "128": "icons/bucket-32.svg"
+  },
   "permissions": [
     "contextMenus",
     "storage",

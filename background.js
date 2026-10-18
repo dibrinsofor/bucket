@@ -55,7 +55,11 @@ browser.runtime.onInstalled.addListener(() => {
   browser.contextMenus.create({
     id: "save-to-bucket",
     title: "Save to Type Bucket",
-    contexts: ["selection"]
+    contexts: ["selection"],
+    icons: {
+      "16": "icons/bucket-16.svg",
+      "32": "icons/bucket-32.svg"
+    }
   });
 });
 
