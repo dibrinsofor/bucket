@@ -1,3 +1,11 @@
+// Get unique key for a font (family + weight)
+function getFontKey(fontInfo) {
+  if (!fontInfo?.fontFamily) return null;
+  const family = fontInfo.fontFamily.split(',')[0].replace(/["']/g, '').trim().toLowerCase();
+  const weight = fontInfo.fontWeight || '400';
+  return `${family}:${weight}`;
+}
+
 // Create context menu on install
 browser.runtime.onInstalled.addListener(() => {
   browser.contextMenus.create({
@@ -35,6 +43,19 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
     };
 
     const { bucket = [] } = await browser.storage.local.get("bucket");
+
+    // Check for duplicate font (same font family + weight = duplicate)
+    const newFontKey = getFontKey(fontInfo);
+    const isDuplicate = bucket.some(existing => {
+      const existingKey = getFontKey(existing.fontInfo);
+      return existingKey && newFontKey && existingKey === newFontKey;
+    });
+
+    if (isDuplicate) {
+      console.log('[TypeBucket] Duplicate font, skipping:', newFontKey);
+      return;
+    }
+
     bucket.push(entry);
     await browser.storage.local.set({ bucket });
 
@@ -82,5 +103,14 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true });
     });
     return true;
+  }
+
+  if (message.type === "OPEN_SIDEBAR") {
+    // Inject sidebar into the tab that sent the message
+    browser.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      files: ["sidebar/sidebar.js"]
+    });
+    return false;
   }
 });

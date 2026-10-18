@@ -1,13 +1,23 @@
 (() => {
   const SIDEBAR_ID = "type-bucket-sidebar";
 
-  // Toggle sidebar
-  const existing = document.getElementById(SIDEBAR_ID);
-  if (existing) {
-    existing.remove();
-    document.body.style.marginLeft = "";
-    return;
+  function init() {
+    // Toggle sidebar - check if already exists
+    const existing = document.getElementById(SIDEBAR_ID);
+    if (existing) {
+      existing.remove();
+      document.body.style.marginLeft = "";
+      chrome.storage.local.set({ sidebarOpen: false });
+      return;
+    }
+
+    // Mark sidebar as open
+    chrome.storage.local.set({ sidebarOpen: true });
+
+    createSidebar();
   }
+
+  function createSidebar() {
 
   // Create sidebar container
   const sidebar = document.createElement("div");
@@ -30,19 +40,22 @@
     }
 
     .sidebar {
+      --mat: #2F5F50;
+      --cream: #F5F2E8;
+      --ink: #1a3a30;
       position: fixed;
       top: 0;
       left: 0;
       width: 335px;
       height: 100vh;
-      background: #fff;
-      border-right: 1px solid #ddd;
+      background: var(--mat);
+      border-right: 1px solid var(--ink);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       font-size: 14px;
       z-index: 2147483647;
       display: flex;
       flex-direction: column;
-      box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+      color: var(--cream);
     }
 
     .header {
@@ -50,8 +63,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 16px;
-      border-bottom: 1px solid #eee;
-      background: #fafafa;
+      border-bottom: 1px solid var(--ink);
     }
 
     .header-left {
@@ -63,7 +75,7 @@
     .header h1 {
       font-size: 16px;
       font-weight: 600;
-      color: #333;
+      color: var(--cream);
     }
 
     .header-right {
@@ -74,18 +86,17 @@
 
     .trash-btn {
       background: none;
-      border: 1px solid #cc0000;
-      border-radius: 4px;
+      border: none;
       cursor: pointer;
-      color: #cc0000;
-      padding: 4px 6px;
+      color: #ff6b6b;
+      padding: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .trash-btn:hover {
-      background: rgba(204, 0, 0, 0.1);
+      color: #ff8a8a;
     }
 
     .trash-btn svg {
@@ -98,13 +109,14 @@
       border: none;
       font-size: 24px;
       cursor: pointer;
-      color: #666;
+      color: var(--cream);
       line-height: 1;
       padding: 4px;
+      opacity: 0.7;
     }
 
     .close-btn:hover {
-      color: #000;
+      opacity: 1;
     }
 
     .content {
@@ -120,8 +132,8 @@
     }
 
     .entry {
-      background: #f5f5f5;
-      border-radius: 8px;
+      background: rgba(0,0,0,0.15);
+      border: 1px solid var(--ink);
       padding: 14px;
       position: relative;
       break-inside: avoid;
@@ -132,7 +144,7 @@
     .entry-text {
       font-size: 14px !important;
       line-height: 1.4 !important;
-      color: #333;
+      color: var(--cream);
       word-break: break-word;
       margin-bottom: 12px;
       max-height: 100px;
@@ -144,15 +156,15 @@
 
     .entry-font-info {
       font-size: 10px;
-      color: #888;
+      color: rgba(245,242,232,0.6);
       margin-top: 10px;
       padding-top: 8px;
-      border-top: 1px solid #e5e5e5;
+      border-top: 1px solid var(--ink);
       line-height: 1.4;
     }
 
     .entry-font-info .font-line {
-      color: #555;
+      color: rgba(245,242,232,0.8);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -165,7 +177,7 @@
     }
 
     .entry-font-info .font-weight {
-      color: #888;
+      color: rgba(245,242,232,0.6);
     }
 
     .entry-font-info .dot {
@@ -174,22 +186,19 @@
       border-radius: 50%;
       flex-shrink: 0;
       margin-left: 8px;
-      box-shadow: 0 0 4px currentColor;
     }
 
     .entry-font-info .dot.system {
-      background: #2a9d2a;
-      color: #2a9d2a;
+      background: #5fd068;
     }
 
     .entry-font-info .dot.proprietary {
-      background: #cc0000;
-      color: #cc0000;
+      background: #ff6b6b;
     }
 
     .entry-meta {
       font-size: 10px;
-      color: #888;
+      color: rgba(245,242,232,0.5);
     }
 
     .entry-source {
@@ -201,30 +210,42 @@
     }
 
     .empty-state {
-      color: #888;
+      color: rgba(245,242,232,0.6);
       text-align: center;
       padding: 40px 20px;
       grid-column: 1 / -1;
     }
 
-    .footer {
+    .input-area {
       padding: 12px 16px;
-      border-top: 1px solid #eee;
-      background: #fafafa;
+      border-bottom: 1px solid var(--ink);
     }
 
     .text-input {
       width: 100%;
       padding: 12px 20px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--ink);
       border-radius: 9999px;
       font-size: 13px;
       font-family: inherit;
+      background: rgba(0,0,0,0.2);
+      color: var(--cream);
+    }
+
+    .text-input::placeholder {
+      color: rgba(245,242,232,0.5);
     }
 
     .text-input:focus {
       outline: none;
-      border-color: #666;
+      border-color: rgba(245,242,232,0.4);
+    }
+
+    .footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--ink);
+      display: flex;
+      justify-content: center;
     }
 
     .hidden {
@@ -241,22 +262,24 @@
         <h1>Type Bucket</h1>
       </div>
       <div class="header-right">
-        <button class="trash-btn hidden" id="trash-btn" title="Clear All">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            <line x1="10" y1="11" x2="10" y2="17"></line>
-            <line x1="14" y1="11" x2="14" y2="17"></line>
-          </svg>
-        </button>
         <button class="close-btn" title="Close">&times;</button>
       </div>
+    </div>
+    <div class="input-area">
+      <input type="text" class="text-input" id="text-input" placeholder="Type something instead">
     </div>
     <div class="content">
       <div class="grid" id="entries"></div>
     </div>
-    <div class="footer">
-      <input type="text" class="text-input" id="text-input" placeholder="Type something instead">
+    <div class="footer hidden" id="footer">
+      <button class="trash-btn" id="trash-btn" title="Clear All">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+      </button>
     </div>
   `;
 
@@ -270,6 +293,7 @@
   // Get elements
   const entriesEl = shadow.getElementById("entries");
   const trashBtn = shadow.getElementById("trash-btn");
+  const footerEl = shadow.getElementById("footer");
   const textInput = shadow.getElementById("text-input");
   const closeBtn = container.querySelector(".close-btn");
 
@@ -371,11 +395,11 @@
 
       if (entries.length === 0) {
         entriesEl.innerHTML = `<div class="empty-state">No saved text yet.<br>Highlight text and right-click to save.</div>`;
-        trashBtn.classList.add("hidden");
+        footerEl.classList.add("hidden");
         return;
       }
 
-      trashBtn.classList.remove("hidden");
+      footerEl.classList.remove("hidden");
       const sorted = [...entries].reverse();
 
       entriesEl.innerHTML = sorted.map(entry => {
@@ -427,6 +451,7 @@
   closeBtn.addEventListener("click", () => {
     sidebar.remove();
     document.body.style.marginLeft = "";
+    chrome.storage.local.set({ sidebarOpen: false });
   });
 
   // Clear all
@@ -451,6 +476,41 @@
     }
   });
 
+  // Store original texts for restoration
+  let originalTexts = [];
+
+  // Preview typed text in all cells
+  textInput.addEventListener('input', (e) => {
+    const previewText = e.target.value;
+    const textEls = entriesEl.querySelectorAll('.entry-text');
+
+    // Store original texts on first input
+    if (originalTexts.length === 0) {
+      textEls.forEach(el => originalTexts.push(el.textContent));
+    }
+
+    // Update all cells with preview text, or restore originals if empty
+    textEls.forEach((el, i) => {
+      el.textContent = previewText || originalTexts[i] || '';
+    });
+  });
+
+  // Clear stored texts when entries reload
+  const originalLoadEntries = loadEntries;
+  loadEntries = function() {
+    originalTexts = [];
+    textInput.value = '';
+    originalLoadEntries();
+  };
+
   // Initial load
   loadEntries();
+  }
+
+  // Wait for body to be ready
+  if (document.body) {
+    init();
+  } else {
+    document.addEventListener('DOMContentLoaded', init);
+  }
 })();
