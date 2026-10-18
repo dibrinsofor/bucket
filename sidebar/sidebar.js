@@ -181,6 +181,8 @@
       overflow: visible;
       min-width: 0;
       margin-top: 14px;
+      display: flex;
+      flex-direction: column;
     }
 
     .entry::before {
@@ -212,6 +214,7 @@
       display: -webkit-box;
       -webkit-line-clamp: 5;
       -webkit-box-orient: vertical;
+      flex: 1;
     }
 
     .entry-font-info {
@@ -254,6 +257,7 @@
     .entry-meta {
       font-size: 10px;
       color: rgba(26,58,48,0.5);
+      margin-top: auto;
     }
 
     .entry-source {
@@ -339,6 +343,7 @@
       align-items: center;
       justify-content: center;
       padding: 0;
+      margin-right: auto;
     }
 
     .theme-btn:hover {
@@ -349,13 +354,13 @@
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      background: conic-gradient(#F5F2E8 0deg 120deg, #1a2a4a 120deg 240deg, #5c3d2e 240deg 360deg);
+      background: conic-gradient(#2F5F50 0deg 90deg, #F5F2E8 90deg 180deg, #1a2a4a 180deg 270deg, #5c3d2e 270deg 360deg);
     }
 
     .theme-popup {
       position: absolute;
       bottom: 52px;
-      right: 16px;
+      left: 16px;
       background: #2F5F50;
       border: 3px solid #b34015;
       border-radius: 12px;
@@ -388,6 +393,10 @@
       border-color: #F5F0DF;
     }
 
+    .theme-option.cream.active {
+      border-color: #EECE51;
+    }
+
     .theme-option.cream {
       background: #F5F2E8;
     }
@@ -398,6 +407,11 @@
 
     .theme-option.brown {
       background: #5c3d2e;
+    }
+
+    .theme-option.green {
+      background: #2F5F50;
+      box-shadow: inset 0 0 0 2px rgba(245,240,223,0.4);
     }
 
     /* Theme variations */
@@ -566,6 +580,7 @@
           <div class="theme-btn-inner"></div>
         </button>
         <div class="theme-popup" id="theme-popup">
+          <div class="theme-option green" data-theme="default" title="Green (Default)"></div>
           <div class="theme-option cream" data-theme="cream" title="Cream"></div>
           <div class="theme-option blue" data-theme="blue" title="Dark Blue"></div>
           <div class="theme-option brown" data-theme="brown" title="Brown"></div>
